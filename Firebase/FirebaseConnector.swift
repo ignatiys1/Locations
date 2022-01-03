@@ -50,7 +50,7 @@ class FirebaseConnector {
     func setImage(imgName: String, img: UIImage) {
         let storage = Storage.storage()
         let reference  = storage.reference()
-        let pathRef = reference.child("Locations")
+        let pathRef = reference.child("driftfiles/Locations")
         
         
         
@@ -67,7 +67,7 @@ class FirebaseConnector {
         })
     }
     
-    func setName(docName: String, name: String, completion: @escaping (String?)->Void) {
+    func setName(docName: String, name: String) {
         let db = configureFB()
         db.collection("Locations").document(docName).setData(["name":name])
     }
