@@ -39,7 +39,7 @@ class FirebaseConnector {
         
         let fileRef = pathRef.child(imgName + ".jpeg")
         fileRef.getData(maxSize: 5000*5000, completion: { data, error in
-            guard error == nil else {return}
+            guard error == nil else {completion(nil); return}
             
             image = UIImage(data: data!)!
             completion(image)
@@ -47,32 +47,49 @@ class FirebaseConnector {
          
     }
     
-    func setImage(imgName: String, img: UIImage) {
+    func saveImage(imgName: String, img: UIImage) {
         let storage = Storage.storage()
         let reference  = storage.reference()
         let pathRef = reference.child("Locations")
         
-        
+        let compr = Float(1/(img.size.width/1000))
         
         let fileRef = pathRef.child(imgName + ".jpeg")
-        fileRef.putData(img.jpegData(compressionQuality: 1)!)
+        fileRef.putData(img.jpegData(compressionQuality: CGFloat(compr))!)
     }
     
-    func getName(docName: String, completion: @escaping (String?)->Void) {
+    func getLocation(docName: String, completion: @escaping (String?, String?)->Void) {
         let db = configureFB()
         let collection = db.collection("Locations")
-        let doc = collection.document("WxC41UJ4jxHBy9X6DvTd")
+        let doc = collection.document(docName)
         doc.getDocument() {(document, error) in
             print(document)
-            guard error == nil else {completion(nil); return}
-            
-            completion(document?.get("name") as? String)
+            guard error == nil else {completion(nil, nil); return}
+            completion(document?.get("name") as? String, document?.get("img") as? String)
         }
     }
     
-    func setName(docName: String, name: String) {
+    func getLocations(completion: @escaping ([Location])->Void) {
         let db = configureFB()
-        db.collection("Locations").document(docName).setData(["name":name])
+        let collection = db.collection("Locations")
+        collection.getDocuments(){ snapshot, error in
+            guard let snapshot = snapshot else {completion([]); return}
+            var locations: [Location] = []
+            for doc in snapshot.documents {
+                locations.append(Location(name: doc.get("name") as? String ?? "", imgName: doc.get("img") as? String))
+            }
+            completion(locations)
+        }
     }
-
+    
+    func saveLocation(location: Location) {
+        let db = configureFB()
+        if let imgName = location.imgName {
+            db.collection("Locations").document().setData(["name":location.name, "img":imgName])
+        } else {
+            db.collection("Locations").document().setData(["name":location.name])
+            
+        }
+    }
+    
 }
