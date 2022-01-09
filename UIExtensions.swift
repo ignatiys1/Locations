@@ -53,6 +53,7 @@ extension UIImageView {
     convenience init(image: UIImage, widthCoef: CGFloat) {
         self.init(image: image)
         
+        //self.addGestureRecognizer(tap)
         self.frame = CGRect(x: 0, y: 0, width: 203*widthCoef, height: 203*widthCoef)
         self.backgroundColor = .none
         

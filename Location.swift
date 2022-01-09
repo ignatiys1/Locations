@@ -13,7 +13,6 @@ class Location {
     var name: String
     var imgName: String?
     var image: UIImageView?
-    var button: UIButton?
     
     init(name: String) {
         self.name = name
@@ -22,5 +21,10 @@ class Location {
     init(name: String, imgName: String?) {
         self.name = name
         self.imgName = imgName
+    }
+    
+    init(name: String, img: UIImageView?) {
+        self.name = name
+        self.image = img
     }
 }

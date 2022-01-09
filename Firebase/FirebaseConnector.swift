@@ -47,17 +47,6 @@ class FirebaseConnector {
          
     }
     
-    func saveImage(imgName: String, img: UIImage) {
-        let storage = Storage.storage()
-        let reference  = storage.reference()
-        let pathRef = reference.child("Locations")
-        
-        let compr = Float(1/(img.size.width/1000))
-        
-        let fileRef = pathRef.child(imgName + ".jpeg")
-        fileRef.putData(img.jpegData(compressionQuality: CGFloat(compr))!)
-    }
-    
     func getLocation(docName: String, completion: @escaping (String?, String?)->Void) {
         let db = configureFB()
         let collection = db.collection("Locations")
@@ -82,6 +71,7 @@ class FirebaseConnector {
         }
     }
     
+    
     func saveLocation(location: Location) {
         let db = configureFB()
         if let imgName = location.imgName {
@@ -90,6 +80,17 @@ class FirebaseConnector {
             db.collection("Locations").document().setData(["name":location.name])
             
         }
+    }
+    
+    func saveImage(imgName: String, img: UIImage) {
+        let storage = Storage.storage()
+        let reference  = storage.reference()
+        let pathRef = reference.child("Locations")
+        
+        //let compr = Float(1/(img.size.width/1000))
+        
+        let fileRef = pathRef.child(imgName + ".jpeg")
+        fileRef.putData(img.jpegData(compressionQuality: 1)!)
     }
     
 }

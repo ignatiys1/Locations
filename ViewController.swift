@@ -15,7 +15,9 @@ class ViewController: UIViewController {
     var heightCoef: CGFloat = 1
     var topPadding = CGFloat(50)
     
-    var mainLabel = UILabel()
+    lazy var mainLabel: UILabel =  {
+        UILabel()
+    }()
     var labelImg = UIImageView()
     var mainTextField = UITextField()
     var addButton = UIButton()
@@ -23,10 +25,10 @@ class ViewController: UIViewController {
     var cardWithImages: UIView?
     
     var imagePicker = UIImagePickerController()
-    var longPressRecognizer: UILongPressGestureRecognizer?
     
     var locations: [Location] = []
-    var imageIsSelected = false
+    var selectedIndex: Int?
+    var second = false
     
     var refreshControl: UIRefreshControl?
     var refreshAlert: UIAlertController?
@@ -45,54 +47,16 @@ class ViewController: UIViewController {
         
         view.backgroundColor = UIColor(red: 0.979, green: 0.979, blue: 0.979, alpha: 1)
         
-        setVectorsFromFigma()
-        setLabelFromFigma()
-        setCardFromFigma()
-        
-        
-        
-        mainTextField.addTarget(self, action: #selector(self.textFieldDidChange), for: .editingChanged)
         addButton.addTarget(self, action: #selector(self.addAction), for: .touchUpInside)
-        
-        
-        let tapRec = UITapGestureRecognizer(target: self, action: #selector(refresh))
-        tapRec.numberOfTapsRequired = 2
-        self.view.addGestureRecognizer(tapRec)
         
         imagePicker.delegate = self
         imagePicker.sourceType = .photoLibrary
         
         
-        longPressRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.imageLongTapped))
-        longPressRecognizer!.minimumPressDuration = 0.5
-    
-        
+        setVectorsFromFigma()
+        setLabelFromFigma()
+        setCardFromFigma()
     }
-    
-    func reloadImages() {
-        var count = 0
-        for (index,location) in locations.enumerated() {
-            guard let imgName = location.imgName else {return}
-            FirebaseConnector.shared.getImage(imgName: imgName) { image in
-                count += 1
-                if imgName == self.locations[index].imgName {
-                    guard let image = image else {
-                        return
-                    }
-                    location.image = UIImageView(image: image, widthCoef: self.widthCoef)
-                }
-//                if count == self.locations.count {
-//                    self.setImageFieldsTo(card: self.cardWithImages!)
-//                }
-                self.setImageFieldsTo(card: self.cardWithImages!)
-            }
-            
-            
-        }
-        
-        
-    }
-    
     
 }
 
@@ -125,6 +89,11 @@ extension ViewController {
         
         mainLabel.textColor = UIColor(red: 0.129, green: 0.126, blue: 0.125, alpha: 1)
         mainLabel.font = UIFont(name: "Oswald-Light", size: 50*heightCoef)
+        mainLabel.isUserInteractionEnabled = true
+        mainLabel.tag = 1
+        
+        let tapPressRecognizer = UITapGestureRecognizer(target: self, action: #selector(imageTapped(sender:)))
+        mainLabel.addGestureRecognizer(tapPressRecognizer)
         
         
         let paragraphStyle = NSMutableParagraphStyle()
@@ -147,7 +116,7 @@ extension ViewController {
     
     func setCardFromFigma() {
         let parent = setCardBackgroung()
-        
+
         let card = setCardFrame(for: parent)
         cardWithImages = card
         setFieldTo(card: card)
@@ -225,23 +194,17 @@ extension ViewController {
     }
     
     fileprivate func setFieldTo(card: UIView) {
-        mainTextField.frame = CGRect(x: 0, y: 0, width: 652*widthCoef, height: 33*heightCoef)
+        mainTextField.frame = CGRect(x: 0, y: 0, width: 652*widthCoef, height: 40*heightCoef)
         mainTextField.backgroundColor = .none
         
         mainTextField.textColor = UIColor(red: 0.525, green: 0.58, blue: 0.584, alpha: 1)
         mainTextField.font = UIFont(name: "Ubuntu", size: 38*heightCoef)
         mainTextField.placeholder = "Название локации"
-        mainTextField.delegate = self
-        let paragraphStyle = NSMutableParagraphStyle()
-        paragraphStyle.lineHeightMultiple = 1.08
-        
-        
-        //mainTextField.attributedText = NSMutableAttributedString(string: "", attributes: [NSAttributedString.Key.paragraphStyle: paragraphStyle])
         
         self.view.addSubview(mainTextField)
         mainTextField.translatesAutoresizingMaskIntoConstraints = false
         mainTextField.widthAnchor.constraint(equalToConstant: 652*widthCoef).isActive = true
-        mainTextField.heightAnchor.constraint(equalToConstant: 33*heightCoef).isActive = true
+        mainTextField.heightAnchor.constraint(equalToConstant: 40*heightCoef).isActive = true
         mainTextField.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 27*widthCoef).isActive = true
         mainTextField.topAnchor.constraint(equalTo: card.topAnchor, constant: 18*heightCoef).isActive = true
         
@@ -269,17 +232,17 @@ extension ViewController {
     }
     
     fileprivate func setImageFieldsTo(card: UIView, indexToHighlight: Int? = nil) {
-        
         for (index,location) in locations.enumerated() {
             if location.image == nil { return} else {
-                location.image?.removeFromSuperview()
-                location.button?.removeFromSuperview()
+                location.image!.removeFromSuperview()
+                location.image!.isUserInteractionEnabled = true
                 
-                location.button = UIButton()
-                location.button?.backgroundColor = .none
-                location.button!.frame = location.image!.frame
-                location.button!.addTarget(self, action: #selector(self.imageLongTapped), for: .touchDownRepeat)
-            
+                let tapPressRecognizer = UITapGestureRecognizer(target: self, action: #selector(imageTapped(sender:)))
+                location.image!.addGestureRecognizer(tapPressRecognizer)
+               
+                let longPressRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.imageLongTapped(sender:)))
+                longPressRecognizer.minimumPressDuration = 0.5
+                location.image!.addGestureRecognizer(longPressRecognizer)
                 
                 var horizontalPosition: CGFloat = 20*widthCoef
                 switch ((index+1)%3) {
@@ -300,7 +263,6 @@ extension ViewController {
                 if let indexToHighlight = indexToHighlight {
                     if index == indexToHighlight {
                         
-                        location.image!.backgroundColor = .red
                         location.image!.frame = CGRect(x: 0, y: 0, width: 203*widthCoef, height: 203*widthCoef)
                         
                         self.view.addSubview(location.image!)
@@ -309,13 +271,6 @@ extension ViewController {
                         location.image!.heightAnchor.constraint(equalToConstant: 203*widthCoef).isActive = true
                         location.image!.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: horizontalPosition).isActive = true
                         location.image!.topAnchor.constraint(equalTo: card.topAnchor, constant: verticalPosition-(15*heightCoef)).isActive = true
-                        
-                        self.view.addSubview(location.button!)
-                        location.button!.translatesAutoresizingMaskIntoConstraints = false
-                        location.button!.widthAnchor.constraint(equalToConstant: 203*widthCoef).isActive = true
-                        location.button!.heightAnchor.constraint(equalToConstant: 203*widthCoef).isActive = true
-                        location.button!.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: horizontalPosition).isActive = true
-                        location.button!.topAnchor.constraint(equalTo: card.topAnchor, constant: verticalPosition-(15*heightCoef)).isActive = true
                         
                         continue
                     } else {
@@ -331,13 +286,6 @@ extension ViewController {
                 location.image!.heightAnchor.constraint(equalToConstant: 203*widthCoef).isActive = true
                 location.image!.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: horizontalPosition).isActive = true
                 location.image!.topAnchor.constraint(equalTo: card.topAnchor, constant: verticalPosition).isActive = true
-                
-                self.view.addSubview(location.button!)
-                location.button!.translatesAutoresizingMaskIntoConstraints = false
-                location.button!.widthAnchor.constraint(equalToConstant: 203*widthCoef).isActive = true
-                location.button!.heightAnchor.constraint(equalToConstant: 203*widthCoef).isActive = true
-                location.button!.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: horizontalPosition).isActive = true
-                location.button!.topAnchor.constraint(equalTo: card.topAnchor, constant: verticalPosition).isActive = true
             }
         }
     }
@@ -365,38 +313,27 @@ extension ViewController {
     
 }
 
-//MARK: TextField Delegate
-extension ViewController: UITextFieldDelegate{
-    
-    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
-        
-        let maxId = getMaxId()
-        
-        return true
-    }
-    
-}
 
 //MARK: ImagePicker Delegate
 extension ViewController: UIImagePickerControllerDelegate, UINavigationControllerDelegate {
     func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
-        picker.dismiss(animated: true, completion: nil)
-        
+        imagePicker.dismiss(animated: true, completion: nil)
         let image = info[.originalImage] as? UIImage
         
-        if let image = image {
-            let imageName = "\(NSDate())"
-            FirebaseConnector.shared.saveLocation(location: Location(name: mainTextField.text!, imgName: imageName))
-            FirebaseConnector.shared.saveImage(imgName: imageName, img: image)
-            
-            FirebaseConnector.shared.getLocations() { locationsFromFS in
-                self.locations = []
-                self.locations = locationsFromFS
-                self.reloadImages()
+        let newName = mainTextField.text!
+        mainTextField.text = ""
+        DispatchQueue.global(qos: .userInteractive).async {
+            if let image = image {
+                let imageName = "\(NSDate())"
+                FirebaseConnector.shared.saveLocation(location: Location(name: newName, imgName: imageName))
+                FirebaseConnector.shared.saveImage(imgName: imageName, img: image)
             }
         }
-        mainTextField.text = ""
         
+        if let image = image {
+            locations.append(Location(name: newName, img: UIImageView(image: image, widthCoef: widthCoef)))
+            reloadImages(withoutUploading: true)
+        }
         
     }
     
@@ -407,9 +344,26 @@ extension ViewController: UIImagePickerControllerDelegate, UINavigationControlle
 
 //MARK: Actions
 extension ViewController {
-    @objc func textFieldDidChange(textfield: UITextField) {
-        
-        
+
+    @objc func imageTapped(sender: UITapGestureRecognizer) {
+        if sender.view!.tag == mainLabel.tag {
+            refresh(sender: self)
+        } else {
+            let imageView = sender.view as! UIImageView
+            let newImageView = UIImageView(image: imageView.image)
+            newImageView.frame = UIScreen.main.bounds
+            newImageView.backgroundColor = .black
+            newImageView.contentMode = .scaleAspectFit
+            newImageView.isUserInteractionEnabled = true
+            let swipe = UISwipeGestureRecognizer(target: self, action: #selector(dismissFullscreenImage(sender:)))
+            swipe.direction = .down
+            newImageView.addGestureRecognizer(swipe)
+            self.view.addSubview(newImageView)
+        }
+    }
+
+    @objc func dismissFullscreenImage(sender: UITapGestureRecognizer) {
+        sender.view?.removeFromSuperview()
     }
     
     @objc func addAction(button: UIButton) {
@@ -417,7 +371,7 @@ extension ViewController {
             let alert = UIAlertController(title: "Ошибка", message: "Необходимо ввести название", preferredStyle: .actionSheet)
             
             let okAction = UIAlertAction(title: "Ok", style: .cancel)
-        
+            
             alert.addAction(okAction)
             present(alert, animated: true, completion: nil)
         } else {
@@ -425,23 +379,28 @@ extension ViewController {
         }
     }
     
-    @objc func imageLongTapped(sender: UIButton) {
-        if imageIsSelected {
-            mainTextField.text = ""
-            imageIsSelected = false
-            setImageFieldsTo(card: cardWithImages!)
-        } else {
+    @objc func imageLongTapped(sender: UIGestureRecognizer) {
+        if !second {
+            second = true
             for (index, location) in locations.enumerated() {
-                if location.button == sender {
-                    mainTextField.text = location.name
-                    imageIsSelected = true
-                    setImageFieldsTo(card: cardWithImages!, indexToHighlight: index)
+                if location.image == sender.view {
+                    if selectedIndex == index {
+                        mainTextField.text = ""
+                        self.selectedIndex = nil
+                        setImageFieldsTo(card: cardWithImages!)
+                    } else {
+                        mainTextField.text = location.name
+                        selectedIndex = index
+                        setImageFieldsTo(card: cardWithImages!, indexToHighlight: index)
+                    }
                     break
                 }
             }
+        } else {
+            second = false
         }
     }
-
+    
     @objc func refresh(sender:AnyObject) {
         print("refreshStart")
         refreshAlert = UIAlertController(title: "Обновление...", message: nil, preferredStyle: .actionSheet)
@@ -459,7 +418,7 @@ extension ViewController {
         DispatchQueue.global(qos: .default).async(execute: {
             print("refreshing")
             sleep(2)
-               
+            
             self.reloadImages()
             
             DispatchQueue.main.async(execute: {
@@ -472,11 +431,28 @@ extension ViewController {
 //MARK: functions
 extension ViewController {
     
-    func getMaxId() -> Int {
-        
-        
-        return 0
-        
+    func reloadImages(withoutUploading: Bool = false) {
+        var count = 0
+        if withoutUploading {
+            self.setImageFieldsTo(card: self.cardWithImages!)
+        } else {
+            for (index,location) in locations.enumerated() {
+                guard let imgName = location.imgName else {return}
+                FirebaseConnector.shared.getImage(imgName: imgName) { image in
+                    count += 1
+                    if imgName == self.locations[index].imgName {
+                        guard let image = image else {
+                            return
+                        }
+                        location.image = UIImageView(image: image, widthCoef: self.widthCoef)
+                    }
+                    
+                    self.setImageFieldsTo(card: self.cardWithImages ?? self.view)
+                }
+                
+                
+            }
+        }
     }
-
+    
 }
